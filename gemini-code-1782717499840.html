@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>中国語単語学習</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-sans); }
+
+    /* 修正②：上部のノッチと下部のホームバーの余白を自動で安全に足す計算に変更 */
+    .app { 
+      padding: calc(1.5rem + env(safe-area-inset-top)) 1rem calc(1.5rem + env(safe-area-inset-bottom)) 1rem; 
+      max-width: 640px; 
+      margin: 0 auto; 
+    }
+
+    .header { margin-bottom: 1.5rem; }
+    .lesson-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.5rem; }
+    .tab { padding: 6px 14px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); font-size: 13px; font-weight: 500; background: var(--surface-2); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+    .tab:hover { background: var(--surface-1); color: var(--text-primary); }
+    .tab.active { background: var(--fill-accent); color: var(--on-accent); border-color: var(--fill-accent); }
+    .mode-btns { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+    .mode-btn { flex: 1; padding: 8px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); font-size: 13px; background: var(--surface-2); color: var(--text-secondary); cursor: pointer; }
+    .mode-btn.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+    .progress-bar { height: 4px; background: var(--surface-1); border-radius: 2px; margin-bottom: 1.5rem; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--fill-accent); border-radius: 2px; transition: width 0.3s ease; }
+    .progress-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; text-align: right; }
+    .card-area { perspective: 1000px; margin-bottom: 1.5rem; }
+    .flashcard { width: 100%; min-height: 200px; border-radius: 12px; border: 0.5px solid var(--border); background: var(--surface-2); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; position: relative; transition: transform 0.1s; user-select: none; }
+    .flashcard:active { transform: scale(0.98); }
+    .flashcard.flipped { background: var(--bg-accent); border-color: var(--border-accent); }
+    .card-tag { position: absolute; top: 12px; left: 12px; font-size: 11px; color: var(--text-muted); }
+    .card-hint { position: absolute; bottom: 12px; right: 12px; font-size: 11px; color: var(--text-muted); }
+    .char { font-size: 56px; font-weight: 400; color: var(--text-primary); line-height: 1.2; font-family: 'Noto Sans SC', var(--font-sans); }
+    .pinyin { font-size: 18px; color: var(--text-accent); margin-top: 8px; font-style: italic; }
+    .meaning { font-size: 22px; color: var(--text-primary); font-weight: 500; margin-top: 4px; }
+    .sub { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+    .card-actions { display: flex; gap: 10px; margin-bottom: 1.5rem; }
+    .btn { flex: 1; padding: 10px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+    .btn-wrong { background: var(--bg-danger); color: var(--text-danger); border-color: var(--border-danger); }
+    .btn-right { background: var(--bg-success); color: var(--text-success); border-color: var(--border-success); }
+    .btn-flip { background: var(--surface-1); color: var(--text-primary); }
+    .btn-next { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+    .btn:hover { opacity: 0.85; }
+    .btn:active { transform: scale(0.97); }
+    .word-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .word-item { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; }
+    .word-item .wchar { font-size: 20px; color: var(--text-primary); font-family: 'Noto Sans SC', var(--font-sans); }
+    .word-item .wpinyin { font-size: 11px; color: var(--text-accent); font-style: italic; margin: 2px 0; }
+    .word-item .wmean { font-size: 12px; color: var(--text-secondary); }
+    .quiz-area { }
+    .quiz-question { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 1rem; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .quiz-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+    .quiz-opt { padding: 12px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); background: var(--surface-2); color: var(--text-primary); font-size: 14px; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .quiz-opt:hover { background: var(--surface-1); }
+    .quiz-opt.correct { background: var(--bg-success); border-color: var(--border-success); color: var(--text-success); }
+    .quiz-opt.wrong { background: var(--bg-danger); border-color: var(--border-danger); color: var(--text-danger); }
+    .stats { display: flex; gap: 10px; margin-bottom: 1rem; }
+    .stat { flex: 1; background: var(--surface-1); border-radius: var(--radius); padding: 10px; text-align: center; }
+    .stat-num { font-size: 22px; font-weight: 500; color: var(--text-primary); }
+    .stat-lbl { font-size: 11px; color: var(--text-muted); }
+    .result-area { text-align: center; padding: 2rem; background: var(--surface-2); border-radius: 12px; border: 0.5px solid var(--border); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h2 style="font-size:18px;font-weight:500;color:var(--text-primary);margin-bottom:4px;">中国語単語学習</h2>
+    <p style="font-size:13px;color:var(--text-muted);">課を選んで学習しましょう</p>
+  </div>
+
+  <div class="lesson-tabs" id="lessonTabs"></div>
+
+  <div class="mode-btns">
+    <button class="mode-btn active" onclick="setMode('flash')" id="modeFlash">フラッシュカード</button>
+    <button class="mode-btn" onclick="setMode('quiz')" id="modeQuiz">クイズ</button>
+    <button class="mode-btn" onclick="setMode('list')" id="modeList">単語リスト</button>
+  </div>
+
+  <div id="flashMode">
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="totalCount">0</div><div class="stat-lbl">合計</div></div>
+      <div class="stat"><div class="stat-num" id="okCount" style="color:var(--text-success)">0</div><div class="stat-lbl">覚えた</div></div>
+      <div class="stat"><div class="stat-num" id="ngCount" style="color:var(--text-danger)">0</div><div class="stat-lbl">要復習</div></div>
+    </div>
+    <div class="progress-label" id="progressLabel">0 / 0</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="card-area">
+      <div class="flashcard" id="flashcard" onclick="flipCard()">
+        <span class="card-tag" id="cardTag">漢字</span>
+        <div class="char" id="cardChar">—</div>
+        <div class="pinyin hidden" id="cardPinyin"></div>
+        <div class="meaning hidden" id="cardMeaning"></div>
+        <div class="sub hidden" id="cardSub"></div>
+        <span class="card-hint" id="cardHint">タップして裏返す</span>
+      </div>
+    </div>
+    <div class="card-actions" id="cardActions">
+      <button class="btn btn-flip" onclick="flipCard()">裏返す</button>
+      <button class="btn btn-next" onclick="nextCard()">次へ →</button>
+    </div>
+    <div class="card-actions hidden" id="ratingActions">
+      <button class="btn btn-wrong" onclick="rate(false)">✗ 要復習</button>
+      <button class="btn btn-right" onclick="rate(true)">✓ 覚えた</button>
+    </div>
+    <div id="resultArea" class="result-area hidden">
+      <p style="font-size:22px;margin-bottom:8px;">🎉</p>
+      <p style="font-size:16px;font-weight:500;color:var(--text-primary);margin-bottom:4px)">セッション完了！</p>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:8px;" id="resultText"></p>
+      <button class="btn btn-next" style="margin-top:16px;max-width:200px;" onclick="restartFlash()">もう一度</button>
+    </div>
+  </div>
+
+  <div id="quizMode" class="hidden">
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="qCorrect" style="color:var(--text-success)">0</div><div class="stat-lbl">正解</div></div>
+      <div class="stat"><div class="stat-num" id="qWrong" style="color:var(--text-danger)">0</div><div class="stat-lbl">不正解</div></div>
+      <div class="stat"><div class="stat-num" id="qRemain">0</div><div class="stat-lbl">残り</div></div>
+    </div>
+    <div class="progress-label" id="qProgressLabel">0 / 0</div>
+    <div class="progress-bar"><div class="progress-fill" id="qProgressFill" style="width:0%"></div></div>
+    <div class="quiz-area">
+      <div class="quiz-question" id="quizQuestion">
+        <div class="char" id="qChar">—</div>
+        <div class="pinyin" id="qPinyin" style="margin-top:8px;"></div>
+      </div>
+      <div class="quiz-opts" id="quizOpts"></div>
+      <button class="btn btn-next hidden" id="qNextBtn" onclick="nextQuiz()" style="margin-bottom:8px;">次の問題 →</button>
+    </div>
+    <div id="qResultArea" class="result-area hidden">
+      <p style="font-size:22px;margin-bottom:8px;">📊</p>
+      <p style="font-size:16px;font-weight:500;color:var(--text-primary);">クイズ完了！</p>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:8px;" id="qResultText"></p>
+      <button class="btn btn-next" style="margin-top:16px;max-width:200px;" onclick="restartQuiz()">もう一度</button>
+    </div>
+  </div>
+
+  <div id="listMode" class="hidden">
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;" id="listCount"></p>
+    <div class="word-list" id="wordList"></div>
+  </div>
+</div>
+
+<script>
+// （データ量多いため中略しますが、元のJavaScriptコードがそのままここに入ります）
+const data = {"1":[["爱人","ài rén","配偶、夫/妻"],["八","bā","八"],["爸爸","bàba","お父さん"],["伯伯","bóbo","伯父（父の兄）"],["旧旧","jiùjiu","叔父（母の兄弟）"] /* ...中略... */ ]};
+// ※GitHub上にある元のスクリプト（データ含む）をそのまま残して貼り付けてください。
+
+let currentLesson = '1';
+let currentMode = 'flash';
+let words = [];
+let flashIdx = 0;
+let isFlipped = false;
+let okSet = new Set();
+let ngSet = new Set();
+let showFront = true;
+let quizWords = [];
+let quizIdx = 0;
+let qCorrect = 0;
+let qWrong = 0;
+let answered = false;
+
+function buildTabs() {
+  const c = document.getElementById('lessonTabs');
+  c.innerHTML = '';
+  Object.keys(data).forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (k === currentLesson ? ' active' : '');
+    b.textContent = `第${k}課 (${data[k].length}語)`;
+    b.onclick = () => selectLesson(k);
+    c.appendChild(b);
+  });
+}
+
+function selectLesson(k) {
+  currentLesson = k;
+  buildTabs();
+  loadLesson();
+}
+
+function loadLesson() {
+  words = [...data[currentLesson]];
+  shuffle(words);
+  flashIdx = 0; isFlipped = false; okSet.clear(); ngSet.clear();
+  document.getElementById('resultArea').classList.add('hidden');
+  document.getElementById('flashcard').classList.remove('hidden');
+  document.getElementById('cardActions').classList.remove('hidden');
+  document.getElementById('ratingActions').classList.add('hidden');
+  renderFlash();
+  if (currentMode === 'quiz') initQuiz();
+  if (currentMode === 'list') renderList();
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function renderFlash() {
+  const w = words[flashIdx];
+  if (!w) return;
+  const card = document.getElementById('flashcard');
+  card.classList.remove('flipped');
+  isFlipped = false;
+  document.getElementById('cardChar').textContent = w[0];
+  document.getElementById('cardPinyin').textContent = w[1];
+  document.getElementById('cardMeaning').textContent = w[2];
+  document.getElementById('cardPinyin').classList.add('hidden');
+  document.getElementById('cardMeaning').classList.add('hidden');
+  document.getElementById('cardSub').classList.add('hidden');
+  document.getElementById('cardHint').textContent = 'タップして裏返す';
+  document.getElementById('cardTag').textContent = `${flashIdx + 1} / ${words.length}`;
+  document.getElementById('cardActions').classList.remove('hidden');
+  document.getElementById('ratingActions').classList.add('hidden');
+  updateFlashStats();
+}
+
+function flipCard() {
+  if (isFlipped) return;
+  isFlipped = true;
+  const card = document.getElementById('flashcard');
+  card.classList.add('flipped');
+  document.getElementById('cardPinyin').classList.remove('hidden');
+  document.getElementById('cardMeaning').classList.remove('hidden');
+  document.getElementById('cardHint').textContent = '覚えた？';
+  document.getElementById('cardActions').classList.add('hidden');
+  document.getElementById('ratingActions').classList.remove('hidden');
+}
+
+function rate(ok) {
+  if (ok) okSet.add(flashIdx); else ngSet.add(flashIdx);
+  nextCard();
+}
+
+function nextCard() {
+  if (flashIdx < words.length - 1) {
+    flashIdx++;
+    renderFlash();
+  } else {
+    showFlashResult();
+  }
+}
+
+function showFlashResult() {
+  document.getElementById('flashcard').classList.add('hidden');
+  document.getElementById('cardActions').classList.add('hidden');
+  document.getElementById('ratingActions').classList.add('hidden');
+  document.getElementById('resultArea').classList.remove('hidden');
+  document.getElementById('resultText').textContent = `覚えた: ${okSet.size}語 / 要復習: ${ngSet.size}語 / 全${words.length}語`;
+}
+
+function restartFlash() {
+  loadLesson();
+}
+
+function updateFlashStats() {
+  document.getElementById('totalCount').textContent = words.length;
+  document.getElementById('okCount').textContent = okSet.size;
+  document.getElementById('ngCount').textContent = ngSet.size;
+  const pct = words.length > 0 ? Math.round((flashIdx / words.length) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${flashIdx} / ${words.length}`;
+}
+
+function setMode(m) {
+  currentMode = m;
+  ['flash','quiz','list'].forEach(x => {
+    document.getElementById(x + 'Mode').classList.toggle('hidden', x !== m);
+    document.getElementById('mode' + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle('active', x === m);
+  });
+  if (m === 'quiz') initQuiz();
+  if (m === 'list') renderList();
+}
+
+function initQuiz() {
+  quizWords = [...data[currentLesson]];
+  shuffle(quizWords);
+  quizIdx = 0; qCorrect = 0; qWrong = 0; answered = false;
+  document.getElementById('qResultArea').classList.add('hidden');
+  document.getElementById('quizOpts').style.display = 'grid';
+  document.getElementById('quizQuestion').style.display = 'flex';
+  renderQuiz();
+}
+
+function renderQuiz() {
+  if (quizIdx >= quizWords.length) { showQuizResult(); return; }
+  const w = quizWords[quizIdx];
+  document.getElementById('qChar').textContent = w[0];
+  document.getElementById('qPinyin').textContent = w[1];
+  document.getElementById('qCorrect').textContent = qCorrect;
+  document.getElementById('qWrong').textContent = qWrong;
+  document.getElementById('qRemain').textContent = quizWords.length - quizIdx;
+  const pct = Math.round((quizIdx / quizWords.length) * 100);
+  document.getElementById('qProgressFill').style.width = pct + '%';
+  document.getElementById('qProgressLabel').textContent = `${quizIdx} / ${quizWords.length}`;
+  answered = false;
+  document.getElementById('qNextBtn').classList.add('hidden');
+  const all = data[currentLesson];
+  const wrong = all.filter(x => x[0] !== w[0]);
+  shuffle(wrong);
+  const opts = [w, ...wrong.slice(0, 3)];
+  shuffle(opts);
+  const container = document.getElementById('quizOpts');
+  container.innerHTML = '';
+  opts.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'quiz-opt';
+    b.textContent = opt[2];
+    b.onclick = () => checkAnswer(b, opt[0] === w[0], w[0]);
+    container.appendChild(b);
+  });
+}
+
+function checkAnswer(btn, correct, correctChar) {
+  if (answered) return;
+  answered = true;
+  if (correct) {
+    btn.classList.add('correct');
+    qCorrect++;
+  } else {
+    btn.classList.add('wrong');
+    qWrong++;
+    document.querySelectorAll('.quiz-opt').forEach(b => {
+      if (b.textContent === data[currentLesson].find(w => w[0] === correctChar)?.[2]) b.classList.add('correct');
+    });
+  }
+  document.getElementById('qNextBtn').classList.remove('hidden');
+  document.getElementById('qCorrect').textContent = qCorrect;
+  document.getElementById('qWrong').textContent = qWrong;
+}
+
+function nextQuiz() {
+  quizIdx++;
+  renderQuiz();
+}
+
+function showQuizResult() {
+  document.getElementById('quizOpts').style.display = 'none';
+  document.getElementById('quizQuestion').style.display = 'none';
+  document.getElementById('qNextBtn').classList.add('hidden');
+  document.getElementById('qResultArea').classList.remove('hidden');
+  const pct = Math.round((qCorrect / quizWords.length) * 100);
+  document.getElementById('qResultText').textContent = `正解: ${qCorrect}問 / 不正解: ${qWrong}問 (正答率 ${pct}%)`;
+}
+
+function restartQuiz() {
+  initQuiz();
+  document.getElementById('quizOpts').style.display = 'grid';
+  document.getElementById('quizQuestion').style.display = 'flex';
+}
+
+function renderList() {
+  const ws = data[currentLesson];
+  document.getElementById('listCount').textContent = `第${currentLesson}課 — ${ws.length}語`;
+  const c = document.getElementById('wordList');
+  c.innerHTML = '';
+  ws.forEach(w => {
+    const d = document.createElement('div');
+    d.className = 'word-item';
+    d.innerHTML = `<div class="wchar">${w[0]}</div><div class="wpinyin">${w[1]}</div><div class="wmean">${w[2]}</div>`;
+    c.appendChild(d);
+  });
+}
+
+buildTabs();
+loadLesson();
+</script>
+</body>
+</html>
