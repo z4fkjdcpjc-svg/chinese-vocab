@@ -23,20 +23,20 @@
 }
 
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
 body { 
   font-family: var(--font-sans); 
-  background: var(--surface-1); /* 背景を少し落ち着いた色に */
+  background: var(--surface-1); 
   min-height: 100vh;           /* 画面の縦幅いっぱいに広げる */
   display: flex;
-  align-items: center;         /* 上下中央に寄せる */
-  justify-content: center;     /* 左右中央に寄せる */
+  flex-direction: column;      /* 縦並びにする */
+  justify-content: center;     /* 上下中央に寄せる */
 }
 .app { 
-  padding: 1.5rem 1rem; 
-  width: 100%;
+  padding: 2rem 1.5rem;        /* すき間を少し広げて見やすく */
+  width: 100%;                 /* 横幅いっぱいに広げる */
   max-width: 640px; 
   margin: 0 auto; 
+  box-sizing: border-box;
 }
 /* ここから下（.header 〜）は今のままで変更なし */
 .header { margin-bottom: 1.5rem; }
