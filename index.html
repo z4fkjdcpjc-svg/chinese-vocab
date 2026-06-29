@@ -1,0 +1,356 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.app { padding: 1.5rem 1rem; max-width: 640px; margin: 0 auto; }
+.header { margin-bottom: 1.5rem; }
+.lesson-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.5rem; }
+.tab { padding: 6px 14px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); font-size: 13px; font-weight: 500; background: var(--surface-2); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+.tab:hover { background: var(--surface-1); color: var(--text-primary); }
+.tab.active { background: var(--fill-accent); color: var(--on-accent); border-color: var(--fill-accent); }
+.mode-btns { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+.mode-btn { flex: 1; padding: 8px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); font-size: 13px; background: var(--surface-2); color: var(--text-secondary); cursor: pointer; }
+.mode-btn.active { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+.progress-bar { height: 4px; background: var(--surface-1); border-radius: 2px; margin-bottom: 1.5rem; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--fill-accent); border-radius: 2px; transition: width 0.3s ease; }
+.progress-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; text-align: right; }
+.card-area { perspective: 1000px; margin-bottom: 1.5rem; }
+.flashcard { width: 100%; min-height: 200px; border-radius: 12px; border: 0.5px solid var(--border); background: var(--surface-2); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; position: relative; transition: transform 0.1s; user-select: none; }
+.flashcard:active { transform: scale(0.98); }
+.flashcard.flipped { background: var(--bg-accent); border-color: var(--border-accent); }
+.card-tag { position: absolute; top: 12px; left: 12px; font-size: 11px; color: var(--text-muted); }
+.card-hint { position: absolute; bottom: 12px; right: 12px; font-size: 11px; color: var(--text-muted); }
+.char { font-size: 56px; font-weight: 400; color: var(--text-primary); line-height: 1.2; font-family: 'Noto Sans SC', var(--font-sans); }
+.pinyin { font-size: 18px; color: var(--text-accent); margin-top: 8px; font-style: italic; }
+.meaning { font-size: 22px; color: var(--text-primary); font-weight: 500; margin-top: 4px; }
+.sub { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+.card-actions { display: flex; gap: 10px; margin-bottom: 1.5rem; }
+.btn { flex: 1; padding: 10px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+.btn-wrong { background: var(--bg-danger); color: var(--text-danger); border-color: var(--border-danger); }
+.btn-right { background: var(--bg-success); color: var(--text-success); border-color: var(--border-success); }
+.btn-flip { background: var(--surface-1); color: var(--text-primary); }
+.btn-next { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+.btn:hover { opacity: 0.85; }
+.btn:active { transform: scale(0.97); }
+.word-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.word-item { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; }
+.word-item .wchar { font-size: 20px; color: var(--text-primary); font-family: 'Noto Sans SC', var(--font-sans); }
+.word-item .wpinyin { font-size: 11px; color: var(--text-accent); font-style: italic; margin: 2px 0; }
+.word-item .wmean { font-size: 12px; color: var(--text-secondary); }
+.quiz-area { }
+.quiz-question { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 1rem; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.quiz-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+.quiz-opt { padding: 12px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); background: var(--surface-2); color: var(--text-primary); font-size: 14px; cursor: pointer; text-align: center; transition: all 0.15s; }
+.quiz-opt:hover { background: var(--surface-1); }
+.quiz-opt.correct { background: var(--bg-success); border-color: var(--border-success); color: var(--text-success); }
+.quiz-opt.wrong { background: var(--bg-danger); border-color: var(--border-danger); color: var(--text-danger); }
+.stats { display: flex; gap: 10px; margin-bottom: 1rem; }
+.stat { flex: 1; background: var(--surface-1); border-radius: var(--radius); padding: 10px; text-align: center; }
+.stat-num { font-size: 22px; font-weight: 500; color: var(--text-primary); }
+.stat-lbl { font-size: 11px; color: var(--text-muted); }
+.result-area { text-align: center; padding: 2rem; background: var(--surface-2); border-radius: 12px; border: 0.5px solid var(--border); }
+.hidden { display: none; }
+</style>
+
+<div class="app">
+  <div class="header">
+    <h2 style="font-size:18px;font-weight:500;color:var(--text-primary);margin-bottom:4px;">中国語単語学習</h2>
+    <p style="font-size:13px;color:var(--text-muted);">課を選んで学習しましょう</p>
+  </div>
+
+  <div class="lesson-tabs" id="lessonTabs"></div>
+
+  <div class="mode-btns">
+    <button class="mode-btn active" onclick="setMode('flash')" id="modeFlash">フラッシュカード</button>
+    <button class="mode-btn" onclick="setMode('quiz')" id="modeQuiz">クイズ</button>
+    <button class="mode-btn" onclick="setMode('list')" id="modeList">単語リスト</button>
+  </div>
+
+  <div id="flashMode">
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="totalCount">0</div><div class="stat-lbl">合計</div></div>
+      <div class="stat"><div class="stat-num" id="okCount" style="color:var(--text-success)">0</div><div class="stat-lbl">覚えた</div></div>
+      <div class="stat"><div class="stat-num" id="ngCount" style="color:var(--text-danger)">0</div><div class="stat-lbl">要復習</div></div>
+    </div>
+    <div class="progress-label" id="progressLabel">0 / 0</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="card-area">
+      <div class="flashcard" id="flashcard" onclick="flipCard()">
+        <span class="card-tag" id="cardTag">漢字</span>
+        <div class="char" id="cardChar">—</div>
+        <div class="pinyin hidden" id="cardPinyin"></div>
+        <div class="meaning hidden" id="cardMeaning"></div>
+        <div class="sub hidden" id="cardSub"></div>
+        <span class="card-hint" id="cardHint">タップして裏返す</span>
+      </div>
+    </div>
+    <div class="card-actions" id="cardActions">
+      <button class="btn btn-flip" onclick="flipCard()">裏返す</button>
+      <button class="btn btn-next" onclick="nextCard()">次へ →</button>
+    </div>
+    <div class="card-actions hidden" id="ratingActions">
+      <button class="btn btn-wrong" onclick="rate(false)">✗ 要復習</button>
+      <button class="btn btn-right" onclick="rate(true)">✓ 覚えた</button>
+    </div>
+    <div id="resultArea" class="result-area hidden">
+      <p style="font-size:22px;margin-bottom:8px;">🎉</p>
+      <p style="font-size:16px;font-weight:500;color:var(--text-primary);margin-bottom:4px)">セッション完了！</p>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:8px;" id="resultText"></p>
+      <button class="btn btn-next" style="margin-top:16px;max-width:200px;" onclick="restartFlash()">もう一度</button>
+    </div>
+  </div>
+
+  <div id="quizMode" class="hidden">
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="qCorrect" style="color:var(--text-success)">0</div><div class="stat-lbl">正解</div></div>
+      <div class="stat"><div class="stat-num" id="qWrong" style="color:var(--text-danger)">0</div><div class="stat-lbl">不正解</div></div>
+      <div class="stat"><div class="stat-num" id="qRemain">0</div><div class="stat-lbl">残り</div></div>
+    </div>
+    <div class="progress-label" id="qProgressLabel">0 / 0</div>
+    <div class="progress-bar"><div class="progress-fill" id="qProgressFill" style="width:0%"></div></div>
+    <div class="quiz-area">
+      <div class="quiz-question" id="quizQuestion">
+        <div class="char" id="qChar">—</div>
+        <div class="pinyin" id="qPinyin" style="margin-top:8px;"></div>
+      </div>
+      <div class="quiz-opts" id="quizOpts"></div>
+      <button class="btn btn-next hidden" id="qNextBtn" onclick="nextQuiz()" style="margin-bottom:8px;">次の問題 →</button>
+    </div>
+    <div id="qResultArea" class="result-area hidden">
+      <p style="font-size:22px;margin-bottom:8px;">📊</p>
+      <p style="font-size:16px;font-weight:500;color:var(--text-primary);">クイズ完了！</p>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:8px;" id="qResultText"></p>
+      <button class="btn btn-next" style="margin-top:16px;max-width:200px;" onclick="restartQuiz()">もう一度</button>
+    </div>
+  </div>
+
+  <div id="listMode" class="hidden">
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;" id="listCount"></p>
+    <div class="word-list" id="wordList"></div>
+  </div>
+</div>
+
+<script>
+const data = {"1":[["爱人","ài rén","配偶、夫/妻"],["八","bā","八"],["爸爸","bàba","お父さん"],["伯伯","bóbo","伯父（父の兄）"],["博物馆","bówùguǎn","博物館"],["不","bù","〜ない"],["参加","cānjiā","参加する"],["车站","chēzhàn","駅"],["陈","Chén","陳（姓）"],["打","dǎ","打つ、する"],["大阪","Dàbǎn","大阪"],["的","de","〜の（助詞）"],["弟弟","dìdi","弟"],["电脑","diànnǎo","パソコン"],["独生","dúshēng","一人っ子の"],["对","duì","正しい、そうです"],["对外","duìwài","対外的な"],["多","duō","多い"],["儿子","érzi","息子"],["二","èr","二"],["方","Fāng","方（姓）"],["福建人","Fújiànrén","福建人"],["服务员","fúwùyuán","店員、ウェイター"],["哥哥","gēge","兄"],["公司","gōngsī","会社"],["姑姑","gūgu","叔母（父の姉妹）"],["顾客","gùkè","お客さん"],["广东人","Guǎngdōngrén","広東人"],["韩国","Hánguó","韓国"],["汉语","Hànyǔ","中国語"],["黄","Huáng","黄（姓）"],["教","jiāo","教える"],["叫","jiào","〜という名前だ"],["姐姐","jiějie","姉"],["今后","jīnhòu","今後"],["九","jiǔ","九"],["韭菜","jiǔcài","ニラ"],["舅舅","jiùjiu","叔父（母の兄弟）"],["看","kàn","見る、読む"],["课本","kèběn","教科書"],["姥姥","lǎolao","祖母（母方）"],["姥爷","lǎoye","祖父（母方）"],["李","Lǐ","李（姓）"],["留学生","liúxuéshēng","留学生"],["六","liù","六"],["鲁迅","Lǔ Xùn","魯迅"],["妈妈","māma","お母さん"],["吗","ma","〜か（疑問助詞）"],["买","mǎi","買う"],["梅田","Méitián","梅田"],["美国人","Měiguórén","アメリカ人"],["每天","měitiān","毎日"],["妹妹","mèimei","妹"],["明天","míngtiān","明日"],["木头","mùtou","木材"],["哪","nǎ","どの"],["那","nà","あの、それ"],["奶奶","nǎinai","祖母（父方）"],["哪个","nǎge","どれ"],["那个","nàge","あれ、それ"],["你","nǐ","あなた"],["你好","nǐ hǎo","こんにちは"],["你们","nǐmen","あなたたち"],["年级","niánjí","学年"],["您","nín","あなた（敬語）"],["女儿","nǚér","娘"],["朋友","péngyou","友達"],["七","qī","七"],["妻子","qīzi","妻"],["请","qǐng","〜してください"],["日本","Rìběn","日本"],["日本人","Rìběnrén","日本人"],["三","sān","三"],["十","shí","十"],["是","shì","〜です、〜だ"],["手表","shǒubiǎo","腕時計"],["书","shū","本"],["叔叔","shūshu","叔父（父の弟）"],["水仙","shuǐxiān","スイセン"],["思想家","sīxiǎngjiā","思想家"],["四","sì","四"],["速成","sùchéng","速成の"],["他","tā","彼"],["她","tā","彼女"],["它","tā","それ（物）"],["他们","tāmen","彼ら"],["她们","tāmen","彼女たち"],["它们","tāmen","それら（物）"],["太极拳","tàijíquán","太極拳"],["同学","tóngxué","クラスメート"],["图书馆","túshūguǎn","図書館"],["晚会","wǎnhuì","パーティー、夕べの集い"],["王","Wáng","王（姓）"],["文学家","wénxuéjiā","文学者"],["我","wǒ","私"],["我们","wǒmen","私たち"],["五","wǔ","五"],["物理","wùlǐ","物理学"],["喜欢","xǐhuan","好きだ"],["系","xì","学科、学部"],["香草茶","xiāngcǎochá","ハーブティー"],["箱子","xiāngzi","箱、スーツケース"],["小","xiǎo","小さい"],["姓","xìng","苗字は〜だ"],["学生","xuésheng","学生"],["学习","xuéxí","勉強する"],["学校","xuéxiào","学校"],["学院","xuéyuàn","学院"],["学者","xuézhě","学者"],["亚麻","yàmá","亜麻"],["爷爷","yéye","祖父（父方）"],["也","yě","〜も"],["一","yī","一"],["姨","yí","叔母（母の姉妹）"],["姨妈","yímā","伯母（母の姉）"],["英语","Yīngyǔ","英語"],["迎新","yíngxīn","新入生歓迎"],["月饼","yuèbǐng","月餅"],["越南","Yuènán","ベトナム"],["在","zài","〜にいる/ある"],["咱们","zánmen","私たち（相手含む）"],["展品","zhǎnpǐn","展示品"],["张","Zhāng","張（姓）"],["丈夫","zhàngfu","夫"],["这","zhè","これ、この"],["这个","zhège","これ"],["指教","zhǐjiào","ご指導"],["中国","Zhōngguó","中国"],["子女","zǐnǚ","子供（息子と娘）"]],"2":[["啊","a","〜よ、〜ね（感嘆）"],["安排","ānpái","手配する、段取りする"],["半","bàn","半分"],["北","běi","北"],["比赛","bǐsài","試合、コンテスト"],["便利店","biànlìdiàn","コンビニ"],["边","biān","辺、側"],["差","chà","足りない、劣る"],["吃","chī","食べる"],["初次","chūcì","初めて"],["出发","chūfā","出発する"],["大","dà","大きい"],["大楼","dàlóu","ビル"],["大学","dàxué","大学"],["第","dì","第〜（順序）"],["地板","dìbǎn","床"],["点","diǎn","時（時刻）、少し"],["东","dōng","東"],["逗号","dòuhào","読点（、）"],["对面","duìmiàn","向かい側"],["顿号","dùnhào","頓号（、の中国版）"],["分","fēn","分"],["复印机","fùyìnjī","コピー機"],["公园","gōngyuán","公園"],["古都","gǔdū","古都"],["关照","guānzhào","よろしくお願いします"],["广场","guǎngchǎng","広場"],["海","hǎi","海"],["号","hào","番号、日付"],["喝","hē","飲む"],["和","hé","〜と"],["红楼梦","Hónglóumèng","紅楼夢"],["后","hòu","後"],["活动","huódòng","活動、イベント"],["积雪","jīxuě","積雪"],["几","jǐ","いくつ"],["家","jiā","家、家族"],["见面","jiànmiàn","会う"],["姐妹","jiěmèi","姉妹"],["今天","jīntiān","今日"],["京都","Jīngdū","京都"],["开始","kāishǐ","始まる、始める"],["科幻","kēhuàn","SF"],["刻","kè","15分"],["厘米","límǐ","センチメートル"],["里","lǐ","中、〜の中に"],["俩","liǎ","2人、2つ"],["镰仓","Liāncāng","鎌倉"],["两","liǎng","2（量詞の前）"],["零","líng","零、ゼロ"],["楼","lóu","階、ビル"],["路旁","lùpáng","道端"],["旅行","lǚxíng","旅行"],["洛阳","Luòyáng","洛陽"],["漫画","mànhuà","漫画"],["没有","méiyǒu","ない、持っていない"],["门旁","ménpáng","ドアの横"],["面","miàn","〜面、方面"],["名著","míngzhù","名作"],["目前","mùqián","現在、今のところ"],["那","nà","あの、それ"],["奈良","Nàiliáng","奈良"],["南","nán","南"],["旁","páng","横、そば"],["啤酒瓶","píjiǔpíng","ビール瓶"],["前","qián","前"],["请假","qǐngjià","休みをとる"],["去","qù","行く"],["日","rì","日"],["三国演义","Sānguó Yǎnyì","三国志演義"],["山","shān","山"],["上","shàng","上"],["上班","shàngbān","出勤する"],["社团","shètuán","サークル"],["谁","shéi","誰"],["什么","shénme","何"],["时候","shíhou","時"],["时间","shíjiān","時間"],["事","shì","こと、用事"],["水","shuǐ","水"],["水浒传","Shuǐhǔzhuàn","水滸伝"],["岁","suì","〜歳"],["听","tīng","聞く"],["通知","tōngzhī","通知、連絡"],["头","tóu","頭"],["外","wài","外"],["晚上","wǎnshang","夜"],["网","wǎng","ネット"],["位","wèi","〜名（敬語の量詞）"],["文学","wénxué","文学"],["西","xī","西"],["西安","Xī'ān","西安"],["西游记","Xīyóujì","西遊記"],["洗手间","xǐshǒujiān","トイレ"],["下","xià","下"],["现在","xiànzài","今"],["想","xiǎng","〜したい、思う"],["小朋友","xiǎopéngyou","子供"],["小心","xiǎoxīn","気をつける"],["校区","xiàoqū","キャンパス"],["信","xìn","手紙"],["信箱","xìnxiāng","メールボックス"],["星期","xīngqī","週、曜日"],["兄弟","xiōngdì","兄弟"],["演讲","yǎnjiǎng","スピーチ"],["演奏会","yǎnzòuhuì","演奏会"],["杨","Yáng","楊（姓）"],["要","yào","〜したい、必要だ"],["页","yè","ページ"],["医学院","yīxuéyuàn","医学部"],["一起","yīqǐ","一緒に"],["饮料","yǐnliào","飲み物"],["有","yǒu","ある、持っている"],["右","yòu","右"],["雨伞","yǔsǎn","傘"],["月","yuè","月"],["早","zǎo","早い、おはよう"],["早上","zǎoshang","朝"],["找","zhǎo","探す、会いに行く"],["正好","zhènghǎo","ちょうど"],["钟","zhōng","時計、〜時"],["周","zhōu","週"],["昨天","zuótiān","昨日"],["左","zuǒ","左"],["作家","zuòjiā","作家"]],"3":[["吧","ba","〜でしょう（推量）"],["白天","báitiān","昼間"],["拜访","bàifǎng","訪問する"],["棒球","bàngqiú","野球"],["笔记本","bǐjìběn","ノート"],["表妹","biǎomèi","従妹（母方）"],["不过","búguò","しかし、でも"],["唱","chàng","歌う"],["厨房","chúfáng","台所"],["储物柜","chǔwùguì","ロッカー"],["大后年","dàhòunián","3年後"],["大后天","dàhòutiān","明後々日"],["大前年","dàqiánnián","3年前"],["大前天","dàqiántiān","先々々日"],["戴","dài","つける、かける（眼鏡など）"],["等","děng","待つ"],["地铁","dìtiě","地下鉄"],["电梯","diàntī","エレベーター"],["欸","éi","あれ？（感嘆）"],["耳机","ěrjī","イヤホン"],["发","fā","送る、発する"],["感冒药","gǎnmàoyào","風邪薬"],["个","gè","個（汎用量詞）"],["广播","guǎngbō","放送"],["好","hǎo","良い、とても"],["后年","hòunián","再来年"],["后天","hòutiān","明後日"],["胡","Hú","胡（姓）"],["会议","huìyì","会議"],["建筑","jiànzhù","建築"],["教授","jiàoshòu","教授"],["节目","jiémù","番組"],["今年","jīnnián","今年"],["卡拉OK","kǎlā OK","カラオケ"],["烤","kǎo","焼く"],["老家","lǎojiā","故郷"],["老师","lǎoshī","先生"],["旅游","lǚyóu","旅行する"],["明年","míngnián","来年"],["模型","móxíng","模型"],["哪里","nǎlǐ","どこ"],["那里","nàlǐ","あそこ、そこ"],["哪儿","nǎr","どこ（口語）"],["那儿","nàr","あそこ（口語）"],["呢","ne","〜は？（省略疑問）"],["女孩子","nǚháizi","女の子"],["其他","qítā","その他"],["前年","qiánnián","一昨年"],["前天","qiántiān","一昨日"],["秋刀鱼","qiūdāoyú","サンマ"],["去年","qùnián","去年"],["人","rén","人"],["上个星期","shàng ge xīngqī","先週"],["上个月","shàng ge yuè","先月"],["上上个星期","shàngshàng ge xīngqī","先々週"],["上上个月","shàngshàng ge yuè","先々月"],["上午","shàngwǔ","午前"],["属","shǔ","〜年生まれ（干支）"],["孙","Sūn","孫（姓）"],["喂","wèi","もしもし"],["味道","wèidào","味"],["下个星期","xià ge xīngqī","来週"],["下个月","xià ge yuè","来月"],["下午","xiàwǔ","午後"],["下下个星期","xiàxià ge xīngqī","再来週"],["下下个月","xiàxià ge yuè","再来月"],["香山","Xiāngshān","香山"],["眼镜","yǎnjìng","眼鏡"],["演奏","yǎnzòu","演奏する"],["夜里","yèlǐ","夜"],["以前","yǐqián","以前"],["邮件","yóujiàn","メール"],["怎么样","zěnmeyàng","どうですか？"],["这个星期","zhège xīngqī","今週"],["这个月","zhège yuè","今月"],["这里","zhèlǐ","ここ"],["这儿","zhèr","ここ（口語）"],["知道","zhīdào","知っている"],["中午","zhōngwǔ","正午"],["周","zhōu","週"],["周末","zhōumò","週末"],["猪","zhū","豚"],["住","zhù","住む"],["坐","zuò","座る、乗る"],["做","zuò","する、作る"]],"4":[["把","bǎ","〜を（処置文）"],["杯子","bēizi","コップ"],["背","bèi","背負う、暗記する"],["被子","bèizi","布団"],["表","biǎo","表、時計"],["兵马俑","bīngmǎyǒng","兵馬俑"],["部","bù","部（量詞）"],["茶壶","cháhú","急須、ティーポット"],["常常","chángcháng","いつも、よく"],["成都","Chéngdū","成都"],["床","chuáng","ベッド"],["词典","cídiǎn","辞書"],["大熊猫","dàxióngmāo","パンダ"],["大衣","dàyī","コート"],["单词","dāncí","単語"],["蛋糕","dàngāo","ケーキ"],["刀","dāo","ナイフ"],["迪士尼乐园","Díshìní Lèyuán","ディズニーランド"],["电影","diànyǐng","映画"],["都","dōu","すべて、みんな"],["短期","duǎnqī","短期"],["对了","duìle","そうだ、ちょっと待って"],["多","duō","多い、たくさん"],["发表","fābiǎo","発表する"],["饭","fàn","ご飯、食事"],["放假","fàngjià","休みになる"],["非常","fēicháng","非常に"],["飞机","fēijī","飛行機"],["分数","fēnshù","点数、成績"],["高","gāo","高い、背が高い"],["高考","gāokǎo","大学入試"],["根","gēn","本（量詞、細長いもの）"],["狗","gǒu","犬"],["挂号信","guàhàoxìn","書留"],["广东菜","Guǎngdōng cài","広東料理"],["贵","guì","高い（値段）"],["好","hǎo","良い"],["河","hé","川"],["很","hěn","とても"],["坏","huài","悪い、壊れた"],["火柴","huǒchái","マッチ"],["鸡","jī","鶏"],["架","jià","機（量詞、飛行機など）"],["件","jiàn","着（量詞、服など）"],["卡车","kǎchē","トラック"],["可爱","kě'ài","かわいい"],["裤子","kùzi","ズボン"],["块","kuài","元（通貨）、塊"],["宽","kuān","幅が広い"],["懒觉","lǎnjué","朝寝坊"],["了","le","〜した（完了）"],["厉害","lìhai","すごい、厳しい"],["辆","liàng","台（量詞、乗り物）"],["流行","liúxíng","流行している"],["路上","lùshang","道中、途中"],["论文","lùnwén","論文"],["猫","māo","猫"],["毛巾","máojīn","タオル"],["没","méi","〜していない"],["面包","miànbāo","パン"],["年","nián","年"],["鸟","niǎo","鳥"],["牛","niú","牛"],["篇","piān","篇（量詞、文章）"],["便宜","piányí","安い"],["票","piào","チケット"],["苹果","píngguǒ","りんご"],["平信","píngxìn","普通郵便"],["汽车","qìchē","自動車"],["铅笔","qiānbǐ","鉛筆"],["强项","qiángxiàng","得意分野"],["热","rè","暑い、熱い"],["肉","ròu","肉"],["三星堆","Sānxīngduī","三星堆"],["散步","sànbù","散歩する"],["扇子","shànzi","扇子"],["上","shàng","上、乗る"],["上海","Shànghǎi","上海"],["上海菜","Shànghǎi cài","上海料理"],["上学","shàngxué","学校へ行く"],["申请","shēnqǐng","申請する"],["神秘","shénmì","神秘的な"],["手册","shǒucè","ハンドブック"],["手帕","shǒupà","ハンカチ"],["书桌","shūzhuō","勉強机"],["暑假","shǔjià","夏休み"],["双","shuāng","双（量詞、対のもの）"],["睡","shuì","寝る"],["四川菜","Sìchuān cài","四川料理"],["所","suǒ","所（量詞、学校など）"],["糖","táng","飴、砂糖"],["讨论","tǎolùn","討論する"],["天","tiān","日、空"],["条","tiáo","本（量詞、細長いもの）"],["头","tóu","頭"],["头发","tóufa","髪"],["哇","wa","わあ（感嘆）"],["袜子","wàzi","靴下"],["玩儿","wánr","遊ぶ"],["问","wèn","聞く、尋ねる"],["问题","wèntí","問題"],["习惯","xíguàn","習慣"],["先","xiān","まず、先に"],["线","xiàn","線"],["项目","xiàngmù","プロジェクト"],["消息","xiāoxi","ニュース、情報"],["鞋","xié","靴"],["新能源车","xīn néngyuán chē","電気自動車"],["行李","xíngli","荷物"],["选择","xuǎnzé","選ぶ"],["学","xué","学ぶ"],["烟","yān","たばこ"],["眼睛","yǎnjīng","目"],["衣服","yīfu","服"],["椅子","yǐzi","椅子"],["有名","yǒumíng","有名な"],["鱼","yú","魚"],["圆珠笔","yuánzhūbǐ","ボールペン"],["杂志","zázhì","雑誌"],["在","zài","〜ている（進行）"],["窄","zhǎi","狭い"],["张","zhāng","枚（量詞、平たいもの）"],["照片","zhàopiàn","写真"],["照相机","zhàoxiàngjī","カメラ"],["真","zhēn","本当に"],["只","zhī","匹（量詞、動物）"],["枝","zhī","本（量詞、細いもの）"],["纸","zhǐ","紙"],["重要","zhòngyào","重要な"],["主意","zhǔyi","アイデア、考え"],["壮观","zhuàngguān","壮大な"],["桌子","zhuōzi","机"],["自行车","zìxíngchē","自転車"],["最","zuì","最も"]],"5":[["百","bǎi","百"],["办","bàn","する、処理する"],["抱歉","bàoqiàn","申し訳ない"],["杯","bēi","杯（量詞）"],["北京","Běijīng","北京"],["冰","bīng","氷"],["不错","búcuò","なかなかいい"],["菜","cài","料理、野菜"],["参观","cānguān","見学する"],["长","cháng","長い"],["出生","chūshēng","生まれる"],["出租车","chūzūchē","タクシー"],["打","dǎ","かける（電話）"],["但是","dànshì","しかし"],["倒","dào","〜してしまった（意外）"],["到","dào","〜まで、着く"],["点","diǎn","時（時刻）"],["电话","diànhuà","電話"],["订","dìng","予約する"],["东西","dōngxi","もの"],["多少","duōshao","いくら、どれくらい"],["二胡","èrhú","二胡"],["法语","Fǎyǔ","フランス語"],["翻译","fānyì","翻訳する、通訳"],["分","fēn","分（時間・通貨）"],["分钟","fēnzhōng","分（時間）"],["高中","gāozhōng","高校"],["够","gòu","十分だ、足りる"],["故宫","Gùgōng","故宮"],["关系","guānxi","関係"],["过","guò","〜したことがある（経験）"],["号码","hàomǎ","番号"],["欢迎","huānyíng","歓迎する"],["会","huì","できる、〜はずだ"],["或者","huòzhě","または"],["简单","jiǎndān","簡単な"],["讲座","jiǎngzuò","講座"],["角","jiǎo","角（通貨、10分の1元）"],["饺子","jiǎozi","餃子"],["叫花鸡","jiàohuājī","叫花鶏"],["井之头线","Jǐngzhītóu xiàn","井の頭線"],["块","kuài","元（通貨）"],["拉","lā","引く"],["来","lái","来る"],["零花钱","línghuāqián","小遣い"],["毛","máo","毛（通貨、10分の1元）"],["名字","míngzi","名前"],["拿铁","nátiě","ラテ"],["哦","ó","へえ、そうなんだ"],["批评","pīpíng","批判する"],["皮儿","pír","皮"],["骑","qí","乗る（自転車など）"],["千","qiān","千"],["钱","qián","お金"],["请问","qǐngwèn","すみません、お聞きしますが"],["然后","ránhòu","それから"],["热","rè","熱い"],["涩谷","Sègǔ","渋谷"],["山手线","Shānshǒu xiàn","山手線"],["手机","shǒujī","スマートフォン"],["说","shuō","言う、話す"],["说话","shuōhuà","話す"],["太古里","Tàigǔlǐ","太古里"],["汤","tāng","スープ"],["万","wàn","万"],["厦门线","Xiàmén xiàn","アモイ線"],["写","xiě","書く"],["亿","yì","億"],["一般","yībān","一般的な、普通"],["一直","yīzhí","ずっと、まっすぐ"],["元","yuán","元（通貨）"],["源氏物语","Yuánjìwùyǔ","源氏物語"],["再","zài","また、再び"],["怎么","zěnme","どうやって"],["站","zhàn","駅、停留所"],["正","zhèng","ちょうど〜している"],["正宗","zhèngzōng","本場の、本物の"],["只","zhǐ","〜だけ"],["坐车","zuò chē","車に乗る"],["座儿","zuòr","座席"]],"6":[["饱","bǎo","お腹がいっぱい"],["毕业","bìyè","卒業する"],["编程","biānchéng","プログラミング"],["冰箱","bīngxiāng","冷蔵庫"],["场","chǎng","回（量詞、公演など）"],["车","chē","車"],["成","chéng","なる、〜に変わる"],["成功","chénggōng","成功する"],["出","chū","出る、出す"],["初中","chūzhōng","中学校"],["词","cí","単語"],["错","cuò","間違い、間違った"],["答","dá","答える"],["打工","dǎgōng","アルバイトする"],["打开","dǎkāi","開ける"],["导演","dǎoyǎn","監督"],["道","dào","道、わかる"],["懂","dǒng","理解する"],["兜风","dōufēng","ドライブする"],["读者","dúzhě","読者"],["放","fàng","放す、置く"],["父母","fùmǔ","両親"],["干净","gānjìng","きれいな"],["刚才","gāngcái","さっき"],["给","gěi","〜に与える、あげる"],["观众","guānzhòng","観客"],["过","guò","過ぎる、経過する"],["还","hái","まだ、さらに"],["海边儿","hǎibiānr","海辺"],["和","hé","〜と"],["黑历史","hēilìshǐ","黒歴史"],["后来","hòulái","その後"],["话","huà","話"],["回","huí","帰る、回る"],["加","jiā","加える、加わる"],["驾照","jiàzhào","運転免許"],["见","jiàn","会う、見る"],["进","jìn","入る"],["精彩","jīngcǎi","すばらしい"],["句","jù","文（量詞）"],["觉得","juéde","〜と思う、感じる"],["咖啡","kāfēi","コーヒー"],["开","kāi","開ける、運転する"],["看","kàn","見る、読む"],["考","kǎo","試験を受ける"],["考生","kǎoshēng","受験生"],["可靠","kěkào","信頼できる"],["可乐","kělè","コーラ"],["老","lǎo","年老いた"],["了","le","〜になった（変化）"],["累","lèi","疲れた"],["理科","lǐkē","理科"],["礼物","lǐwù","プレゼント"],["聊","liáo","おしゃべりする"],["聊天儿","liáotiānr","おしゃべりする"],["没想到","méi xiǎngdào","思いもよらなかった"],["明白","míngbai","わかる"],["拿","ná","持つ、取る"],["奶精","nǎijīng","コーヒーフレッシュ"],["难","nán","難しい"],["腻","nì","飽きる、くどい"],["爬","pá","登る"],["平时","píngshí","普段"],["普洱茶","Pǔ'ěrchá","プーアル茶"],["起","qǐ","起きる、始まる"],["清楚","qīngchǔ","はっきりしている"],["认识","rènshi","知っている、知り合う"],["日文","Rìwén","日本語（書き言葉）"],["商量","shāngliang","相談する"],["上","shàng","上、乗る"],["深山老林","shēnshān lǎolín","深山幽谷"],["生日","shēngrì","誕生日"],["食堂","shítáng","食堂"],["收回","shōuhuí","回収する"],["熟","shú","熟知している"],["送","sòng","送る、贈る"],["太","tài","〜すぎる"],["糖","táng","飴、砂糖"],["套餐","tàocān","セットメニュー"],["题","tí","問題"],["天气","tiānqì","天気"],["听劝","tīngquàn","忠告を聞く"],["退烧药","tuìshāoyào","解熱剤"],["完","wán","終わる"],["晚","wǎn","遅い、夜"],["围棋","wéiqí","囲碁"],["文科","wénkē","文科"],["洗","xǐ","洗う"],["下","xià","下、降りる"],["夏天","xiàtiān","夏"],["小","xiǎo","小さい"],["小时","xiǎoshí","時間（1時間）"],["心眼儿","xīnyǎnr","心がけ、気配り"],["新作","xīnzuò","新作"],["幸好","xìnghǎo","幸いにも"],["修","xiū","修理する"],["休息","xiūxi","休む"],["雪山","xuěshān","雪山"],["要","yào","〜しようとする、必要だ"],["一会儿","yīhuìr","少しの間"],["已经","yǐjīng","すでに"],["赢","yíng","勝つ"],["有意思","yǒu yìsi","面白い"],["运气","yùnqi","運"],["钟头","zhōngtóu","時間（1時間）"],["中学","zhōngxué","中学校"],["终于","zhōngyú","ついに"],["转学","zhuǎnxué","転校する"],["坐","zuò","座る"]],"7":[["哎呀","āiyā","あらら、やあ（感嘆）"],["哎呀呀","āiyāyā","あらまあ（感嘆）"],["吧","ba","〜でしょう"],["班","bān","クラス"],["北海道","Běihǎidào","北海道"],["鼻子","bízi","鼻"],["比较","bǐjiào","比較的、比べる"],["遍","biàn","回（量詞、動作の回数）"],["便饭","biànfàn","気軽な食事"],["别","bié","〜するな"],["病","bìng","病気"],["不要","búyào","〜するな、いらない"],["餐馆","cānguǎn","レストラン"],["超市","chāoshì","スーパー"],["次","cì","回（量詞）"],["答应","dāying","承諾する、返事する"],["大象","dàxiàng","象"],["带","dài","持っていく、連れて行く"],["担心","dānxīn","心配する"],["顿","dùn","回（量詞、食事）"],["发烧","fāshāo","熱が出る"],["饭点儿","fàndiǎnr","食事の時間"],["份儿","fènr","人前、部分"],["丰富","fēngfù","豊富な"],["给","gěi","〜のために"],["工作","gōngzuò","仕事、働く"],["古迹","gǔjī","遺跡"],["观点","guāndiǎn","観点"],["过去","guòqù","過去"],["好意思","hǎo yìsi","恥ずかしくない、厚かましい"],["合理","hélǐ","合理的な"],["寄","jì","送る（郵便）"],["家","jiā","家"],["价格","jiàgé","値段"],["坚持","jiānchí","続ける、頑張る"],["检查","jiǎnchá","検査する"],["讲","jiǎng","話す、説明する"],["叫","jiào","呼ぶ"],["节","jié","節（量詞、授業など）"],["结论","jiélùn","結論"],["经常","jīngcháng","よく、しばしば"],["经验","jīngyàn","経験"],["开会","kāihuì","会議をする"],["课","kè","授業"],["客气","kèqi","遠慮する"],["快递","kuàidì","宅配便"],["款式","kuǎnshì","スタイル、デザイン"],["浪费","làngfèi","無駄にする"],["冷冻","lěngdòng","冷凍する"],["脸色","liǎnsè","顔色"],["留","liú","留まる、残す"],["留学","liúxué","留学する"],["麻烦","máfan","面倒な、面倒をかける"],["没事儿","méishìr","大丈夫、構わない"],["名胜","míngshèng","名所"],["跑","pǎo","走る"],["陪","péi","付き合う、一緒にいる"],["牵强","qiānqiǎng","こじつけな"],["秦","Qín","秦（王朝・姓）"],["裙子","qúnzi","スカート"],["石锅拌饭","shíguō bànfàn","石焼ビビンバ"],["趟","tàng","回（量詞、往復）"],["疼","téng","痛い"],["添","tiān","加える"],["头","tóu","頭"],["推荐信","tuījiànxìn","推薦状"],["哇","wa","わあ（感嘆）"],["外卖","wàimài","出前"],["碗","wǎn","杯（量詞、お椀）"],["文章","wénzhāng","文章"],["物价","wùjià","物価"],["下","xià","終わる、降りる"],["下班","xiàbān","退勤する"],["谢谢","xièxie","ありがとう"],["新加坡","Xīnjiāpō","シンガポール"],["新颖","xīnyǐng","斬新な"],["药","yào","薬"],["医院","yīyuàn","病院"],["一寸光阴一寸金","yīcùn guāngyīn yīcùn jīn","時は金なり"],["一下","yīxià","ちょっと〜する"],["有点儿","yǒudiǎnr","少し、ちょっと"],["糟糕","zāogāo","まずい、大変だ"],["粥","zhōu","おかゆ"],["走廊","zǒuláng","廊下"],["走路","zǒulù","歩く"],["作业","zuòyè","宿題"]],"8":[["安静","ānjìng","静かな"],["比","bǐ","〜より"],["别人","biérén","他人"],["不用","búyòng","必要ない"],["餐厅","cāntīng","レストラン"],["操作","cāozuò","操作する"],["出门","chūmén","外出する"],["窗口","chuāngkǒu","窓口"],["打车","dǎchē","タクシーに乗る"],["打字","dǎzì","タイピングする"],["大","dà","大きい"],["大厅","dàtīng","ホール、ロビー"],["得","děi","〜しなければならない"],["地方","dìfang","場所"],["点儿","diǎnr","少し"],["电子","diànzǐ","電子"],["多了","duō le","ずっと〜だ"],["方便","fāngbiàn","便利な"],["俯卧撑","fǔwòchēng","腕立て伏せ"],["付","fù","支払う"],["干","gàn","する、働く"],["股票","gǔpiào","株"],["挂号","guàhào","受付する"],["规矩","guīju","規則、マナー"],["过","guò","過ぎる"],["还是","háishi","それとも、やはり"],["活儿","huór","仕事"],["季节","jìjié","季節"],["减肥","jiǎnféi","ダイエットする"],["交费","jiāofèi","料金を払う"],["酒","jiǔ","お酒"],["快","kuài","速い"],["冷","lěng","寒い"],["路","lù","道"],["没关系","méi guānxi","大丈夫、構わない"],["梅雨","méiyǔ","梅雨"],["门","mén","ドア"],["米饭","mǐfàn","ご飯"],["那么","nàme","そんなに、では"],["难为情","nánwéiqíng","恥ずかしい"],["内科","nèikē","内科"],["能","néng","できる"],["胖","pàng","太っている"],["热闹","rènao","にぎやかな"],["入乡随俗","rù xiāng suí sú","郷に入れば郷に従え"],["少","shǎo","少ない"],["身体","shēntǐ","体"],["剩下","shèngxia","残る"],["市中心","shì zhōngxīn","市内中心部"],["守","shǒu","守る"],["舒服","shūfu","気持ちいい、快適"],["输入","shūrù","入力する"],["刷卡","shuākǎ","カードで払う"],["网红","wǎnghóng","インフルエンサー"],["微信","Wēixìn","WeChat"],["现金","xiànjīn","現金"],["一口气","yīkǒuqì","一気に"],["一些","yīxiē","いくつか、少し"],["用","yòng","使う"],["又","yòu","また、さらに"],["语音","yǔyīn","音声"],["预约","yùyuē","予約する"],["晕","yūn","目が回る"],["早饭","zǎofàn","朝食"],["涨","zhǎng","上がる（値段など）"],["照顾","zhàogù","世話をする"],["这么","zhème","こんなに"],["诊室","zhěnshì","診察室"],["支付","zhīfù","支払う"],["字","zì","文字"],["自助机","zìzhùjī","自動機"],["总是","zǒngshì","いつも"],["醉","zuì","酔う"]]};
+
+let currentLesson = '1';
+let currentMode = 'flash';
+let words = [];
+let flashIdx = 0;
+let isFlipped = false;
+let okSet = new Set();
+let ngSet = new Set();
+let showFront = true;
+let quizWords = [];
+let quizIdx = 0;
+let qCorrect = 0;
+let qWrong = 0;
+let answered = false;
+
+function buildTabs() {
+  const c = document.getElementById('lessonTabs');
+  c.innerHTML = '';
+  Object.keys(data).forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (k === currentLesson ? ' active' : '');
+    b.textContent = `第${k}課 (${data[k].length}語)`;
+    b.onclick = () => selectLesson(k);
+    c.appendChild(b);
+  });
+}
+
+function selectLesson(k) {
+  currentLesson = k;
+  buildTabs();
+  loadLesson();
+}
+
+function loadLesson() {
+  words = [...data[currentLesson]];
+  shuffle(words);
+  flashIdx = 0; isFlipped = false; okSet.clear(); ngSet.clear();
+  document.getElementById('resultArea').classList.add('hidden');
+  document.getElementById('flashcard').classList.remove('hidden');
+  document.getElementById('cardActions').classList.remove('hidden');
+  document.getElementById('ratingActions').classList.add('hidden');
+  renderFlash();
+  if (currentMode === 'quiz') initQuiz();
+  if (currentMode === 'list') renderList();
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function renderFlash() {
+  const w = words[flashIdx];
+  if (!w) return;
+  const card = document.getElementById('flashcard');
+  card.classList.remove('flipped');
+  isFlipped = false;
+  document.getElementById('cardChar').textContent = w[0];
+  document.getElementById('cardPinyin').textContent = w[1];
+  document.getElementById('cardMeaning').textContent = w[2];
+  document.getElementById('cardPinyin').classList.add('hidden');
+  document.getElementById('cardMeaning').classList.add('hidden');
+  document.getElementById('cardSub').classList.add('hidden');
+  document.getElementById('cardHint').textContent = 'タップして裏返す';
+  document.getElementById('cardTag').textContent = `${flashIdx + 1} / ${words.length}`;
+  document.getElementById('cardActions').classList.remove('hidden');
+  document.getElementById('ratingActions').classList.add('hidden');
+  updateFlashStats();
+}
+
+function flipCard() {
+  if (isFlipped) return;
+  isFlipped = true;
+  const card = document.getElementById('flashcard');
+  card.classList.add('flipped');
+  document.getElementById('cardPinyin').classList.remove('hidden');
+  document.getElementById('cardMeaning').classList.remove('hidden');
+  document.getElementById('cardHint').textContent = '覚えた？';
+  document.getElementById('cardActions').classList.add('hidden');
+  document.getElementById('ratingActions').classList.remove('hidden');
+}
+
+function rate(ok) {
+  if (ok) okSet.add(flashIdx); else ngSet.add(flashIdx);
+  nextCard();
+}
+
+function nextCard() {
+  if (flashIdx < words.length - 1) {
+    flashIdx++;
+    renderFlash();
+  } else {
+    showFlashResult();
+  }
+}
+
+function showFlashResult() {
+  document.getElementById('flashcard').classList.add('hidden');
+  document.getElementById('cardActions').classList.add('hidden');
+  document.getElementById('ratingActions').classList.add('hidden');
+  document.getElementById('resultArea').classList.remove('hidden');
+  document.getElementById('resultText').textContent = `覚えた: ${okSet.size}語 / 要復習: ${ngSet.size}語 / 全${words.length}語`;
+}
+
+function restartFlash() {
+  loadLesson();
+}
+
+function updateFlashStats() {
+  document.getElementById('totalCount').textContent = words.length;
+  document.getElementById('okCount').textContent = okSet.size;
+  document.getElementById('ngCount').textContent = ngSet.size;
+  const pct = words.length > 0 ? Math.round((flashIdx / words.length) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${flashIdx} / ${words.length}`;
+}
+
+function setMode(m) {
+  currentMode = m;
+  ['flash','quiz','list'].forEach(x => {
+    document.getElementById(x + 'Mode').classList.toggle('hidden', x !== m);
+    document.getElementById('mode' + x.charAt(0).toUpperCase() + x.slice(1)).classList.toggle('active', x === m);
+  });
+  if (m === 'quiz') initQuiz();
+  if (m === 'list') renderList();
+}
+
+function initQuiz() {
+  quizWords = [...data[currentLesson]];
+  shuffle(quizWords);
+  quizIdx = 0; qCorrect = 0; qWrong = 0; answered = false;
+  document.getElementById('qResultArea').classList.add('hidden');
+  document.getElementById('quizOpts').style.display = 'grid';
+  document.getElementById('quizQuestion').style.display = 'flex';
+  renderQuiz();
+}
+
+function renderQuiz() {
+  if (quizIdx >= quizWords.length) { showQuizResult(); return; }
+  const w = quizWords[quizIdx];
+  document.getElementById('qChar').textContent = w[0];
+  document.getElementById('qPinyin').textContent = w[1];
+  document.getElementById('qCorrect').textContent = qCorrect;
+  document.getElementById('qWrong').textContent = qWrong;
+  document.getElementById('qRemain').textContent = quizWords.length - quizIdx;
+  const pct = Math.round((quizIdx / quizWords.length) * 100);
+  document.getElementById('qProgressFill').style.width = pct + '%';
+  document.getElementById('qProgressLabel').textContent = `${quizIdx} / ${quizWords.length}`;
+  answered = false;
+  document.getElementById('qNextBtn').classList.add('hidden');
+  const all = data[currentLesson];
+  const wrong = all.filter(x => x[0] !== w[0]);
+  shuffle(wrong);
+  const opts = [w, ...wrong.slice(0, 3)];
+  shuffle(opts);
+  const container = document.getElementById('quizOpts');
+  container.innerHTML = '';
+  opts.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'quiz-opt';
+    b.textContent = opt[2];
+    b.onclick = () => checkAnswer(b, opt[0] === w[0], w[0]);
+    container.appendChild(b);
+  });
+}
+
+function checkAnswer(btn, correct, correctChar) {
+  if (answered) return;
+  answered = true;
+  if (correct) {
+    btn.classList.add('correct');
+    qCorrect++;
+  } else {
+    btn.classList.add('wrong');
+    qWrong++;
+    document.querySelectorAll('.quiz-opt').forEach(b => {
+      if (b.textContent === data[currentLesson].find(w => w[0] === correctChar)?.[2]) b.classList.add('correct');
+    });
+  }
+  document.getElementById('qNextBtn').classList.remove('hidden');
+  document.getElementById('qCorrect').textContent = qCorrect;
+  document.getElementById('qWrong').textContent = qWrong;
+}
+
+function nextQuiz() {
+  quizIdx++;
+  renderQuiz();
+}
+
+function showQuizResult() {
+  document.getElementById('quizOpts').style.display = 'none';
+  document.getElementById('quizQuestion').style.display = 'none';
+  document.getElementById('qNextBtn').classList.add('hidden');
+  document.getElementById('qResultArea').classList.remove('hidden');
+  const pct = Math.round((qCorrect / quizWords.length) * 100);
+  document.getElementById('qResultText').textContent = `正解: ${qCorrect}問 / 不正解: ${qWrong}問 (正答率 ${pct}%)`;
+}
+
+function restartQuiz() {
+  initQuiz();
+  document.getElementById('quizOpts').style.display = 'grid';
+  document.getElementById('quizQuestion').style.display = 'flex';
+}
+
+function renderList() {
+  const ws = data[currentLesson];
+  document.getElementById('listCount').textContent = `第${currentLesson}課 — ${ws.length}語`;
+  const c = document.getElementById('wordList');
+  c.innerHTML = '';
+  ws.forEach(w => {
+    const d = document.createElement('div');
+    d.className = 'word-item';
+    d.innerHTML = `<div class="wchar">${w[0]}</div><div class="wpinyin">${w[1]}</div><div class="wmean">${w[2]}</div>`;
+    c.appendChild(d);
+  });
+}
+
+buildTabs();
+loadLesson();
+</script>
